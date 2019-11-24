@@ -1,7 +1,0 @@
-Col_Name,Datatype,Nullable,start,end,length
-Name,StringType(),False,1,5,5
-Dept,StringType(),False,6,7,2
-City,StringType(),False,8,11,4
-State,StringType(),False,12,15,4
-Country,StringType(),False,16,20,5
-Salary,IntType(),True,21,24,4
