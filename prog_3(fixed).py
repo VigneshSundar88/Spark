@@ -11,13 +11,11 @@ class parse_file():
             option("inferSchema", "true").\
             load(self.fixed_length_schema)
  
-
         read_fixed_length_file = spark.read.format("csv").\
             option("header", "false").\
             load(self.fixed_length_file).\
             toDF("fixed_line")
-         
-        
+           
         self.substr_file(read_fixed_schema, read_fixed_length_file) 
   
     def substr_file(self, read_fixed_schema, read_fixed_length_file):
