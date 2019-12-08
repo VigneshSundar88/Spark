@@ -6,8 +6,8 @@ def create_schema():
             option("header", "true").\
             option("inferSchema", "true").\
             load(fixed_length_schema)
-    schema_as_dict = map(lambda schema_to_dict: schema_to_dict.asDict(), read_fixed_schema.select("Col_Name", "Datatype", "Nullable").collect())
-    list_schema = list(schema_as_dict)
+    schema_for_columns = map(lambda schema_to_dict: schema_to_dict.asDict(), read_fixed_schema.select("Col_Name", "Datatype", "Nullable").collect())
+    list_schema = list(schema_for_columns)
     datatype_dict = {'StringType()': StringType(), 'IntType()': IntegerType()}
     struct_field_list = []
     for schema_dict in list_schema:
