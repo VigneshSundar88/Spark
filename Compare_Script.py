@@ -30,7 +30,12 @@ class comparison_script():
 		self.target_name = None
 		self.source_df = None
 		self.target_df = None
-		self.sep = None
+		self.source_sep = None
+		self.target_sep = None
+		self.source_avsc_path = None
+		self.target_avsc_path = None
+		self.source_where = None
+		self.target_where = None
 		self.read_source_changed_df = None
 		self.read_target_changed_df = None
 		self.source_df_list = []
@@ -52,12 +57,21 @@ class comparison_script():
 		self.target_name_list = self.config_parse.items('TARGET_NAME')
 		self.source_data = self.config_parse.items('SOURCE')
 		self.target_data = self.config_parse.items('TARGET')
-		self.sep = self.config_parse.items('SEP')
+		if self.source.lower() == "csv":
+			self.source_sep = self.config_parse.items('SOURCE_SEP')
+		if self.target.lower() == "csv":
+			self.target_sep = self.config_parse.items('TARGET_SEP')
+		if self.source.lower() == "avro":
+			self.source_avsc_schema = self.config_parse.items('SOURCE_AVRO_SCHEMA')
+		if self.target.lower() == "avro":
+			self.target_avsc_schema = self.config_parse.items('TARGET_AVRO_SCHEMA')
 		self.output_summ_file_location_list = self.config_parse.items('OUTPUT_FILE_LOCATION')
 		self.output_summ_file_name_list = self.config_parse.items('OUTPUT_FILE_NAME')
-
+		self.source_where = self.config_parse.items('SOURCE_WHERE')
+		self.target_where = self.config_parse.items('TARGET_WHERE')
+		
 	def create_source_target_df(self):
-		if self.source.lower() == "hive" or self.target.lower() == "hive":
+		if (self.source.lower() == "hive" or self.target.lower() == "hive") or (self.source.lower() == "hive" and self.target.lower() == "hive"):
 			if self.source.lower() == "hive":
 				tbl_list = self.source_data
 			elif self.target.lower() == "hive":
@@ -70,7 +84,7 @@ class comparison_script():
 					if self.source.lower() == "hive":
 						self.source_df = spark.read.table(hive_tbl_name)
 						self.source_df_list.append(self.source_df)
-					elif self.target.lower() == "hive":
+					if self.target.lower() == "hive":
 						self.target_df = spark.read.table(hive_tbl_name)
 						self.target_df_list.append(self.target_df)
 			elif len(tbl_list) == 1:
@@ -78,30 +92,80 @@ class comparison_script():
 				if self.source.lower() == "hive":
 					self.source_df = spark.read.table(hive_tbl_name)
 					self.source_df_list.append(self.source_df)
-				elif self.target.lower() == "hive":
+				if self.target.lower() == "hive":
 					self.target_df = spark.read.table(hive_tbl_name)
 					self.target_df_list.append(self.target_df)
 					
+		if (self.source.lower() == "csv" or self.target.lower() == "csv") or (self.source.lower() == "csv" and self.target.lower() == "csv"):
+			if self.source.lower() == "csv":
+				csv_list = self.source_data
+			if self.source.lower() == "csv":
+				csv_list = self.source_data
+			
 			if len(csv_list) > 1:
 				for csv_pos, csv_file in enumerate(csv_list):
 					csv_file_name = csv_file[1]
-					
 					if self.source.lower() == "csv":
 					    sep_val = self.sep[csv_pos][1]
-						self.source_df = spark.read.csv(csv_file_name, sep=sep_val, header=True)
+						source_df_with_null = spark.read.csv(csv_file_name, sep=sep_val, header=True)
+						self.source_df = source_df_with_null.na.fill("", source_df_with_null.columns)
 						self.source_df_list.append(self.source_df)
-					elif self.target.lower() == "csv":
+					if self.target.lower() == "csv":
 						sep_val = self.sep[csv_pos][1]
-						self.target_df = spark.read.csv(csv_file_name, sep=sep_val, header=True)
+						target_df_with_null = spark.read.csv(csv_file_name, sep=sep_val, header=True)
+						self.target_df = target_df_with_null.na.fill("", target_df_with_null.columns)
 						self.target_df_list.append(self.target_df)
 			elif len(csv_list) == 1:
-				sep_val = self.sep[0][1]
 				csv_file_name = csv_list[0][1]
 				if self.source.lower() == "csv":
-					self.source_df = spark.read.csv(csv_file_name, sep=sep_val, header=True)
+					sep_val = self.sep[0][1]
+					source_df_with_null = spark.read.csv(csv_file_name, sep=sep_val, header=True)
+					self.source_df = source_df_with_null.na.fill("", source_df_with_null.columns)
 					self.source_df_list.append(self.source_df)
-				elif self.target.lower() == "hive":
-					self.target_df = spark.read.csv(csv_file_name, sep=sep_val, header=True)
+				if self.target.lower() == "csv":
+					sep_val = self.sep[0][1]
+					target_df_with_null = spark.read.csv(csv_file_name, sep=sep_val, header=True)
+					self.target_df = target_df_with_null.na.fill("", target_df_with_null.columns)
+					self.target_df_list.append(self.target_df)
+					
+		if (self.source.lower() == "avro" or self.target.lower() == "avro") or (self.source.lower() == "avro" and self.target.lower() == "avro"):
+			if self.source.lower() == "avro":
+				avro_list = self.source_data
+			if self.target.lower() == "avro":
+				avro_list = self.target_data
+			
+			if len(avro_list) > 1:
+				for avro_pos, avro_file in enumerate(avro_list):
+					avro_file_name = avro_file[1]
+					if self.source.lower() == "avro":
+					    avsc_file = self.source_avsc_path[avro_pos][1]
+						read_schema_file = SP.Popen(["hdfs", "dfs", "-cat", avsc_file], stdout=SP.PIPE, stderr=SP.PIPE)
+						(schema_val, schema_err) = read_schema_file.communicate()
+						source_df_with_null = spark.read.format("com.databricks.spark.avro").option("avroSchema", schema_val).load(avro_file_name)
+						self.source_df = source_df_with_null.na.fill("", source_df_with_null.columns)
+						self.source_df_list.append(self.source_df)
+					if self.target.lower() == "avro":
+						avsc_file = self.target_avsc_path[avro_pos][1]
+						read_schema_file = SP.Popen(["hdfs", "dfs", "-cat", avsc_file], stdout=SP.PIPE, stderr=SP.PIPE)
+						(schema_val, schema_err) = read_schema_file.communicate()
+						target_df_with_null = spark.read.format("com.databricks.spark.avro").option("avroSchema", schema_val).load(avro_file_name)
+						self.target_df = target_df_with_null.na.fill("", target_df_with_null.columns)
+						self.target_df_list.append(self.target_df)
+			elif len(avro_list) == 1:
+				avro_file_name = avro_list[0][1]
+				if self.source.lower() == "avro":
+					avsc_file = self.source_avsc_path[0][1]
+					read_schema_file = SP.Popen(["hdfs", "dfs", "-cat", avsc_file], stdout=SP.PIPE, stderr=SP.PIPE)
+					(schema_val, schema_err) = read_schema_file.communicate()
+					source_df_with_null = spark.read.format("com.databricks.spark.avro").option("avroSchema", schema_val).load(avro_file_name)
+					self.source_df = source_df_with_null.na.fill("", source_df_with_null.columns)
+					self.source_df_list.append(self.source_df)
+				if self.target.lower() == "avro":
+					avsc_file = self.target_avro_path[0][1]
+					read_schema_file = SP.Popen(["hdfs", "dfs", "-cat", avsc_file], stdout=SP.PIPE, stderr=SP.PIPE)
+					(schema_val, schema_err) = read_schema_file.communicate()
+					target_df_with_null = spark.read.format("com.databricks.spark.avro").option("avroSchema", schema_val).load(avro_file_name)
+					self.target_df = target_df_with_null.na.fill("", target_df_with_null.columns)
 					self.target_df_list.append(self.target_df)
 					
 	def change_df_col(self):
@@ -115,7 +179,17 @@ class comparison_script():
 			source_col_name_lower = map(lambda col_name: col_name.lower(), source_df_init_columns)
 			target_col_name_lower = map(lambda col_name: col_name.lower(), target_df_init_columns)
 			
+			column_diff_source_target = list(set(source_col_name_lower).intersection(set(target_col_name_lower)))
+			column_diff_target_source = list(set(target_col_name_lower).intersection(set(source_col_name_lower)))
+			
+			print("Columns seen in source but not in target: \n")
+			print(column_diff_source_target)
+			print("Columns seen in target but not in source: \n")
+			print(column_diff_target_source)
+			
 			common_columns = list(set(source_col_name_lower).intersection(set(target_col_name_lower)))
+			
+			print("Number of columns to compare: "+str(len(common_columns)))
 			
 			read_source_df = source_df.select(common_columns)
 			read_target_df = target_df.select(common_columns)
@@ -133,8 +207,8 @@ class comparison_script():
 			self.target_name = self.target_name_list[ind][1]
 			
 			print("Comparison between the {source_name} and {target_name}".format(source_name=self.source_name, target_name=self.target_name))
-			
 			map(lambda col_name: self.compare_source_and_target_df(col_name, pos_val=ind), common_columns)
+			self.union_tbl_summ_diff(ind)
 			
 	def create_key_columns(self, pos_val):
 		fetch_all_source_key = self.config_parse.items('SOURCE_KEYS')
