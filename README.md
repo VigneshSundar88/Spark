@@ -9,3 +9,8 @@ This PySpark script is to create the AVSC file from the metadata CSV file and AV
 2) Create_struct_patient_intake.py
 
 This PySpark script is to fetch the Patient Intake Data by grouping the columns: PatientNumber, PatientIntakeId
+
+3) TotalTime.py
+
+This PySpark script is to calculate the time spent by each user on watching a TV show
+Used Lag function
