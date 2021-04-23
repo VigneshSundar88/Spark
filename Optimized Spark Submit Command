@@ -1,0 +1,9 @@
+To submit the script from the edge node and run it in local:
+============================================================
+
+spark-submit --master yarn --deploy-mode client --driver-memory 8g --executor-memory 16g --executor-cores 4 --conf "spark.pyspark.python=python2.7" --conf "spark.pyspark.driver.python2.7" --name testSparkScript --conf spark.sql.shuffle.partition=50 --conf spark.shuffle.service.enabled=true --conf spark.dynamicAllocation.enabled=True --conf spark.dynamicAllocation.initialExecutors=3 --conf spark.dynamicAllocation.minExecutors=2 --conf spark.dynamicAllocation.maxExecutors=5 <Python file> 
+
+To submit the script from the edge node and run it in cluster:
+==============================================================
+
+spark-submit --master yarn --deploy-mode cluster --driver-memory 8g --executor-memory 16g --executor-cores 4 --conf "spark.pyspark.python=python2.7" --conf "spark.pyspark.driver.python2.7" --name testSparkScript --conf spark.sql.shuffle.partition=50 --conf spark.shuffle.service.enabled=true --conf spark.dynamicAllocation.enabled=True --conf spark.dynamicAllocation.initialExecutors=3 --conf spark.dynamicAllocation.minExecutors=2 --conf spark.dynamicAllocation.maxExecutors=5 <Python file> 
