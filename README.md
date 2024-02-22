@@ -12,5 +12,5 @@ This PySpark script is to fetch the Patient Intake Data by grouping the columns:
 
 3) TotalTime.py
 
-This PySpark script is to calculate the time spent by each user on watching a TV show
+This PySpark script is to calculate the time spent by each user watching a TV show
 Used Lag, when, coalesce, window functions
